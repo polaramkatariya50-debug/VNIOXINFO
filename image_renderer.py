@@ -23,6 +23,7 @@ def text_to_image(text):
     text = mask_sensitive(text)
     key = hashlib.md5(text.encode()).hexdigest()
     path = f"{CACHE_DIR}/{key}.png"
+
     if CACHE_ENABLED and os.path.exists(path):
         return path
 
@@ -51,7 +52,7 @@ def text_to_image(text):
         y += line_h
 
     if ENABLE_WATERMARK:
-        d.text((width-360, height-30), WATERMARK_TEXT, font=font, fill="#777777")
+        d.text((width - 360, height - 30), WATERMARK_TEXT, font=font, fill="#777777")
 
     img.save(path)
     return path
