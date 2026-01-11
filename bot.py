@@ -1,7 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler,
-    CallbackQueryHandler, ContextTypes, ChatMemberHandler
+    ApplicationBuilder, CallbackQueryHandler,
+    ContextTypes, MessageHandler, filters,
+    ChatMemberHandler, CommandHandler
 )
 from config import *
 from apis import *
@@ -13,13 +14,15 @@ from logger import send_log
 
 db = Database(MONGO_URI, DB_NAME)
 
-def is_owner(uid): return uid in OWNER_IDS
+# ---------- HELPERS ----------
+def is_owner(uid):
+    return uid in OWNER_IDS
 
 async def check_join(uid, context):
     for cid in MUST_JOIN_CHANNELS:
         try:
             m = await context.bot.get_chat_member(cid, uid)
-            if m.status in ("left","kicked"):
+            if m.status in ("left", "kicked"):
                 return False
         except:
             return False
@@ -27,101 +30,123 @@ async def check_join(uid, context):
 
 async def must_join(update):
     btn = [[InlineKeyboardButton("🔔 Join", url=l)] for l in MUST_JOIN_CHANNELS.values()]
-    btn.append([InlineKeyboardButton("✅ I Joined", callback_data="check_join")])
     await update.message.reply_text(
         "🚫 Bot use karne ke liye sabhi channels join karo",
         reply_markup=InlineKeyboardMarkup(btn)
     )
 
-async def send_image(update, title, data):
+async def send_result(update, title, data):
     text = fmt_all(title, data)
     img = text_to_image(text)
     pdf = image_to_pdf(img)
-    await update.message.reply_photo(photo=open(img,"rb"), caption=title)
-    await update.message.reply_document(document=open(pdf,"rb"), filename="OSINT_Report.pdf")
 
+    await update.message.reply_photo(photo=open(img, "rb"), caption=title)
+    await update.message.reply_document(document=open(pdf, "rb"), filename="OSINT_Report.pdf")
+
+# ---------- START ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
     db.add_user(u.id)
+
     await send_log(context.bot, f"START\nUser: {u.id} @{u.username}")
 
     if not await check_join(u.id, context):
-        await must_join(update); return
+        await must_join(update)
+        return
 
     buttons = [
-        [InlineKeyboardButton("📞 Indian Number", callback_data="num")],
-        [InlineKeyboardButton("🚗 Vehicle → Owner", callback_data="vehiclenum")],
-        [InlineKeyboardButton("🪪 Family / Ration", callback_data="family")],
-        [InlineKeyboardButton("🇵🇰 Pakistan Number", callback_data="pk")],
-        [InlineKeyboardButton("🚘 RC Info", callback_data="rc")],
-        [InlineKeyboardButton("🎮 Free Fire UID", callback_data="ff")],
-        [InlineKeyboardButton("🏦 IFSC Info", callback_data="ifsc")],
-        [InlineKeyboardButton("📡 Call Trace", callback_data="calltrace")],
-        [InlineKeyboardButton("💳 Fampay Info", callback_data="fampay")],
+        [InlineKeyboardButton("📞 Indian Number", callback_data="search:num")],
+        [InlineKeyboardButton("🚗 Vehicle → Owner", callback_data="search:veh_owner")],
+        [InlineKeyboardButton("🚘 Vehicle → Information", callback_data="search:veh_info")],
+        [InlineKeyboardButton("🪪 Family / Ration", callback_data="search:family")],
+        [InlineKeyboardButton("🇵🇰 Pakistan Number", callback_data="search:pk")],
+        [InlineKeyboardButton("🚘 RC Info", callback_data="search:rc")],
+        [InlineKeyboardButton("🎮 Free Fire UID", callback_data="search:ff")],
+        [InlineKeyboardButton("🏦 IFSC Info", callback_data="search:ifsc")],
+        [InlineKeyboardButton("📡 Call Trace", callback_data="search:trace")],
+        [InlineKeyboardButton("💳 Fampay Info", callback_data="search:fampay")],
     ]
-    if is_owner(u.id):
-        buttons.append([InlineKeyboardButton("👑 OWNER PANEL", callback_data="owner")])
 
     await update.message.reply_text(
         "🔥 OSINT MAIN MENU",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
-async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
-    if q.data == "owner":
-        await q.message.reply_text(
-            "👑 OWNER PANEL",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📣 GLOBAL BROADCAST", callback_data="gcast")]
-            ])
-        )
+# ---------- BUTTON ROUTER ----------
+async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    action, key = q.data.split(":")
+    if action != "search":
         return
-    await q.message.reply_text(f"Usage:\n/{q.data} <value>")
 
-async def num(update, c): await send_image(update,"INDIAN NUMBER INFO",api_num(c.args[0]))
-async def vehiclenum(update, c): await send_image(update,"VEHICLE NUM TO OWNER",api_vehicle_num(c.args[0]))
-async def family(update, c): await send_image(update,"RATION CARD FAMILY",api_id_family(c.args[0]))
-async def pk(update, c): await send_image(update,"PAKISTAN NUMBER",api_pk(c.args[0]))
-async def rc(update, c): await send_image(update,"RC INFO",api_rc(c.args[0]))
-async def ff(update, c): await send_image(update,"FREE FIRE UID",api_ff(c.args[0]))
-async def ifsc(update, c): await send_image(update,"IFSC INFO",api_ifsc(c.args[0]))
-async def calltrace(update, c): await send_image(update,"CALL TRACE",api_calltrace(c.args[0]))
-async def fampay(update, c): await send_image(update,"FAMPAY INFO",api_fampay(c.args[0]))
+    context.user_data["await"] = key
 
-async def gcast(update, context):
-    if not is_owner(update.effective_user.id): return
-    msg = " ".join(context.args)
-    for u in db.get_users():
-        try: await context.bot.send_message(u, msg)
-        except: pass
-    await send_log(context.bot, f"GLOBAL BROADCAST\nBy {update.effective_user.id}")
+    examples = {
+        "num": "📞 Example:\n9876543210",
+        "veh_owner": "🚗 Example:\nUP64AF2215",
+        "veh_info": "🚘 Example:\nMH01AB1234",
+        "family": "🪪 Example:\n066004120629",
+        "pk": "🇵🇰 Example:\n3014819864",
+        "rc": "🚘 Example:\nMH01AB1234",
+        "ff": "🎮 Example:\n2819649271",
+        "ifsc": "🏦 Example:\nSBIN0000001",
+        "trace": "📡 Example:\n9876543210",
+        "fampay": "💳 Example:\nmouktik0@fam",
+    }
 
+    await q.message.reply_text(
+        f"{examples.get(key)}\n\n✍️ Now send value:"
+    )
+
+# ---------- TEXT INPUT ----------
+async def text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    key = context.user_data.get("await")
+    if not key:
+        return
+
+    value = update.message.text.strip()
+    context.user_data["await"] = None
+
+    loading = await update.message.reply_text("⏳ Loading, please wait...")
+
+    api_map = {
+        "num": api_num,
+        "veh_owner": api_vehicle_num,
+        "veh_info": api_vehicle_info,
+        "family": api_id_family,
+        "pk": api_pk,
+        "rc": api_rc,
+        "ff": api_ff,
+        "ifsc": api_ifsc,
+        "trace": api_calltrace,
+        "fampay": api_fampay,
+    }
+
+    data = api_map[key](value)
+    await loading.delete()
+    await send_result(update, key.upper(), data)
+
+# ---------- BOT ADDED ----------
 async def bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.my_chat_member.new_chat_member.status == "member":
-        u = update.effective_user; chat = update.effective_chat
+        u = update.effective_user
+        chat = update.effective_chat
         await context.bot.send_message(
             chat.id,
             f"👋 Hello {chat.title}\n🤖 OSINT Bot Activated\nAdded by @{u.username or u.first_name}"
         )
         await send_log(context.bot, f"BOT ADDED\nBy {u.id}\nChat {chat.id}")
 
+# ---------- MAIN ----------
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(menu))
-    app.add_handler(ChatMemberHandler(bot_added, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    app.add_handler(CommandHandler("num", num))
-    app.add_handler(CommandHandler("vehiclenum", vehiclenum))
-    app.add_handler(CommandHandler("family", family))
-    app.add_handler(CommandHandler("pk", pk))
-    app.add_handler(CommandHandler("rc", rc))
-    app.add_handler(CommandHandler("ff", ff))
-    app.add_handler(CommandHandler("ifsc", ifsc))
-    app.add_handler(CommandHandler("calltrace", calltrace))
-    app.add_handler(CommandHandler("fampay", fampay))
-    app.add_handler(CommandHandler("gcast", gcast))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(router))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_input))
+    app.add_handler(ChatMemberHandler(bot_added, ChatMemberHandler.MY_CHAT_MEMBER))
 
     app.run_polling()
 
