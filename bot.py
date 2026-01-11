@@ -1,8 +1,12 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CallbackQueryHandler,
-    ContextTypes, MessageHandler, filters,
-    ChatMemberHandler, CommandHandler
+    ApplicationBuilder,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+    ChatMemberHandler,
+    CommandHandler,
 )
 from config import *
 from apis import *
@@ -12,45 +16,61 @@ from pdf_exporter import image_to_pdf
 from db import Database
 from logger import send_log
 
+# ================= DATABASE =================
 db = Database(MONGO_URI, DB_NAME)
 
-# ---------- HELPERS ----------
-def is_owner(uid):
+# ================= HELPERS =================
+def is_owner(uid: int) -> bool:
     return uid in OWNER_IDS
 
-async def check_join(uid, context):
+
+async def check_join(uid: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     for cid in MUST_JOIN_CHANNELS:
         try:
-            m = await context.bot.get_chat_member(cid, uid)
-            if m.status in ("left", "kicked"):
+            member = await context.bot.get_chat_member(cid, uid)
+            if member.status in ("left", "kicked"):
                 return False
-        except:
+        except Exception:
             return False
     return True
 
-async def must_join(update):
-    btn = [[InlineKeyboardButton("🔔 Join", url=l)] for l in MUST_JOIN_CHANNELS.values()]
+
+async def must_join(update: Update):
+    buttons = [
+        [InlineKeyboardButton("🔔 Join Channel", url=url)]
+        for url in MUST_JOIN_CHANNELS.values()
+    ]
     await update.message.reply_text(
-        "🚫 Bot use karne ke liye sabhi channels join karo",
-        reply_markup=InlineKeyboardMarkup(btn)
+        "🚫 Bot use karne ke liye pehle sabhi channels join karo:",
+        reply_markup=InlineKeyboardMarkup(buttons),
     )
 
-async def send_result(update, title, data):
+
+async def send_result(update: Update, title: str, data: dict):
     text = fmt_all(title, data)
-    img = text_to_image(text)
-    pdf = image_to_pdf(img)
+    img_path = text_to_image(text)
+    pdf_path = image_to_pdf(img_path)
 
-    await update.message.reply_photo(photo=open(img, "rb"), caption=title)
-    await update.message.reply_document(document=open(pdf, "rb"), filename="OSINT_Report.pdf")
+    await update.message.reply_photo(
+        photo=open(img_path, "rb"),
+        caption=f"📄 {title}",
+    )
+    await update.message.reply_document(
+        document=open(pdf_path, "rb"),
+        filename="OSINT_Report.pdf",
+    )
 
-# ---------- START ----------
+# ================= START =================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    db.add_user(u.id)
+    user = update.effective_user
+    db.add_user(user.id)
 
-    await send_log(context.bot, f"START\nUser: {u.id} @{u.username}")
+    await send_log(
+        context.bot,
+        f"START\nUser ID: {user.id}\nUsername: @{user.username}",
+    )
 
-    if not await check_join(u.id, context):
+    if not await check_join(user.id, context):
         await must_join(update)
         return
 
@@ -68,16 +88,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-        "🔥 OSINT MAIN MENU",
-        reply_markup=InlineKeyboardMarkup(buttons)
+        "🔥 **VNIOX OSINT PANEL**\n\nSelect an option:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown",
     )
 
-# ---------- BUTTON ROUTER ----------
+# ================= BUTTON ROUTER =================
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    query = update.callback_query
+    await query.answer()
 
-    action, key = q.data.split(":")
+    if context.user_data is None:
+        context.user_data = {}
+
+    try:
+        action, key = query.data.split(":")
+    except ValueError:
+        return
+
     if action != "search":
         return
 
@@ -96,12 +124,16 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "fampay": "💳 Example:\nmouktik0@fam",
     }
 
-    await q.message.reply_text(
-        f"{examples.get(key)}\n\n✍️ Now send value:"
+    await query.message.reply_text(
+        f"{examples.get(key, '✍️ Send input value')}\n\n✍️ Now send value:"
     )
 
-# ---------- TEXT INPUT ----------
+# ================= TEXT INPUT HANDLER =================
 async def text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # SAFETY: ensure user_data exists
+    if context.user_data is None:
+        context.user_data = {}
+
     key = context.user_data.get("await")
     if not key:
         return
@@ -124,22 +156,32 @@ async def text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "fampay": api_fampay,
     }
 
-    data = api_map[key](value)
-    await loading.delete()
-    await send_result(update, key.upper(), data)
+    try:
+        data = api_map[key](value)
+        await loading.delete()
+        await send_result(update, key.upper(), data)
+    except Exception as e:
+        await loading.edit_text(f"❌ Error: {e}")
 
-# ---------- BOT ADDED ----------
+# ================= BOT ADDED TO GROUP =================
 async def bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.my_chat_member.new_chat_member.status == "member":
-        u = update.effective_user
+        user = update.effective_user
         chat = update.effective_chat
+
         await context.bot.send_message(
             chat.id,
-            f"👋 Hello {chat.title}\n🤖 OSINT Bot Activated\nAdded by @{u.username or u.first_name}"
+            f"👋 Hello {chat.title}\n\n"
+            f"🤖 VNIOX OSINT Bot Activated\n"
+            f"➕ Added by @{user.username or user.first_name}",
         )
-        await send_log(context.bot, f"BOT ADDED\nBy {u.id}\nChat {chat.id}")
 
-# ---------- MAIN ----------
+        await send_log(
+            context.bot,
+            f"BOT ADDED\nBy: {user.id}\nChat ID: {chat.id}",
+        )
+
+# ================= MAIN =================
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -148,7 +190,9 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_input))
     app.add_handler(ChatMemberHandler(bot_added, ChatMemberHandler.MY_CHAT_MEMBER))
 
+    print("🤖 VNIOX OSINT Bot is running...")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
