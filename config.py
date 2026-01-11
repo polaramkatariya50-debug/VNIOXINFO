@@ -6,8 +6,10 @@ MUST_JOIN_CHANNELS = {
     -1001596819852: "https://t.me/+whz_G-xn0KdkZWI1",
     -1003389483500: "https://t.me/heroku_club",
     -1001511253627: "https://t.me/NOBITA_SUPPORT",
+    -1002401784535: "https://t.me/OsintInformationGroup",
     -1002363071054: "https://t.me/+Ah7RcBKx4zQ2YTE1",
 }
+
 
 # Clone / Monetization
 CLONE_FREE_DAYS = 3
