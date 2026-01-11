@@ -1,4 +1,4 @@
-BOT_TOKEN = "PASTE_BOT_TOKEN"
+BOT_TOKEN = "8556191807:AAGt7noEjSaRlxZChZPFCorb3DlaxcTO_X0"
 
 OWNER_IDS = {6972508083}
 
@@ -19,7 +19,7 @@ CLONE_PRICE_INR = 400   # per month
 LOG_CHANNEL_ID = -100XXXXXXXXXX   # private log channel/group
 
 # Mongo
-MONGO_URI = "PASTE_MONGO_URI"
+MONGO_URI = "mongodb+srv://vishalpandeynkp:Bal6Y6FZeQeoAoqV@cluster0.dzgwt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 DB_NAME = "vni0x"
 
 # Image system
