@@ -16,7 +16,7 @@ CLONE_FREE_DAYS = 3
 CLONE_PRICE_INR = 400   # per month
 
 # Logs
-LOG_CHANNEL_ID = -100XXXXXXXXXX   # private log channel/group
+LOG_CHANNEL_ID = -1002223516578   # private log channel/group
 
 # Mongo
 MONGO_URI = "mongodb+srv://vishalpandeynkp:Bal6Y6FZeQeoAoqV@cluster0.dzgwt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
