@@ -1,13 +1,22 @@
 from telegram import Update
-from telegram.ext import *
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters
+)
+
 from config import BOT_TOKEN, BLOCKED_GROUP_IDS
-from keyboards import *
+from keyboards import main_menu, INFO_MENU
 from apis import *
 from formatters import *
 from utils import save_txt
 from db import ensure_user
 
-# ===== API BUTTON MAP =====
+# ================= API BUTTON MAP =================
+
 BUTTONS = {
     "📱 INDIA NUMBER INFO": (api_india_number, fmt_india_number),
     "🇵🇰 PAKISTAN NUMBER INFO": (api_pak_number, fmt_pakistan_number),
@@ -20,10 +29,11 @@ BUTTONS = {
     "💳 FAMPAY INFO": (api_fampay, fmt_fampay_info),
 }
 
-# ===== /START =====
+# ================= /START =================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔕 Silent in blocked group
-    if update.effective_chat.id in BLOCKED_GROUP_IDS:
+    # Silent in blocked group
+    if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
     uid = update.effective_user.id
@@ -54,19 +64,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-# ===== VERIFY CALLBACK =====
+
+# ================= VERIFY CALLBACK =================
+
 async def verify_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
+
     await update.callback_query.message.reply_text(
         "✅ *VERIFICATION SUCCESSFUL*\n\nWelcome! 🎉",
         reply_markup=main_menu(update.effective_user.id),
         parse_mode="Markdown"
     )
 
-# ===== MESSAGE HANDLER =====
+
+# ================= MESSAGE HANDLER =================
+
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔕 Silent in blocked group
-    if update.effective_chat.id in BLOCKED_GROUP_IDS:
+    # Silent in blocked group
+    if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
     txt = update.message.text.strip()
@@ -78,6 +93,15 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=INFO_MENU,
             parse_mode="Markdown"
         )
+        return
+
+    # Back button
+    if txt == "⬅️ BACK":
+        await update.message.reply_text(
+            "⬅️ Back to main menu",
+            reply_markup=main_menu(update.effective_user.id)
+        )
+        context.user_data.clear()
         return
 
     # API button pressed
@@ -105,11 +129,18 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         context.user_data.clear()
 
-# ===== BOT START =====
-app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(verify_callback, pattern="verify_join"))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+# ================= BOT START =================
 
-app.run_polling()
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(verify_callback, pattern="verify_join"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
