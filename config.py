@@ -1,7 +1,10 @@
+# ===== BOT =====
 BOT_TOKEN = "8556191807:AAGt7noEjSaRlxZChZPFCorb3DlaxcTO_X0"
 
+# ===== OWNER =====
 OWNER_IDS = {6972508083}
 
+# ===== MUST JOIN =====
 MUST_JOIN_CHANNELS = {
     -1001596819852: "https://t.me/+whz_G-xn0KdkZWI1",
     -1003389483500: "https://t.me/heroku_club",
@@ -10,22 +13,13 @@ MUST_JOIN_CHANNELS = {
     -1002363071054: "https://t.me/+Ah7RcBKx4zQ2YTE1",
 }
 
+# ===== LOG =====
+LOG_CHANNEL_ID = -1001234567890  # REAL ID ONLY
 
-# Clone / Monetization
-CLONE_FREE_DAYS = 3
-CLONE_PRICE_INR = 400   # per month
-
-# Logs
-LOG_CHANNEL_ID = -1002223516578   # private log channel/group
-
-# Mongo
+# ===== DB =====
 MONGO_URI = "mongodb+srv://vishalpandeynkp:Bal6Y6FZeQeoAoqV@cluster0.dzgwt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 DB_NAME = "vni0x"
 
-# Image system
-THEME = "dark"          # dark / light
-ENABLE_BLUR = True
-ENABLE_WATERMARK = True
-CACHE_ENABLED = True
-
+# ===== RENDER =====
 WATERMARK_TEXT = "VNIOX • OSINT"
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
