@@ -1,7 +1,13 @@
 import uuid
+import json
 
-def save_txt(text):
-    path = f"/tmp/result_{uuid.uuid4().hex[:6]}.txt"
+def save_txt(data):
+    path = f"/tmp/result_{uuid.uuid4().hex[:8]}.txt"
+
     with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+        if isinstance(data, (dict, list)):
+            f.write(json.dumps(data, indent=2, ensure_ascii=False))
+        else:
+            f.write(str(data))
+
     return path
