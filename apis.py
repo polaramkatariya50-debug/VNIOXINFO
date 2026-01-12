@@ -23,7 +23,10 @@ def api_vehicle_num(v):
     )
 
 def api_vehicle_info(rc):
-    return get("https://vnioxcyber.vercel.app/api/vehicle", {"rc": rc})
+    return get(
+        "https://vnioxcyber.vercel.app/api/vehicle",
+        {"rc": rc}
+    )
 
 def api_id_family(fid):
     return get(
@@ -32,16 +35,31 @@ def api_id_family(fid):
     )
 
 def api_pak_number(n):
-    return get("https://paknum.amorinthz.workers.dev/", {"key": "AMORINTH", "number": n})
+    return get(
+        "https://paknum.amorinthz.workers.dev/",
+        {"key": "AMORINTH", "number": n}
+    )
 
 def api_ff(uid):
-    return get("https://api-cr-ffinfo.kesug.com/ff.php", {"uid": uid})
+    return get(
+        "https://api-cr-ffinfo.kesug.com/ff.php",
+        {"uid": uid}
+    )
 
 def api_ifsc(code):
-    return get("https://ab-ifscinfoapi.vercel.app/info", {"ifsc": code})
+    return get(
+        "https://ab-ifscinfoapi.vercel.app/info",
+        {"ifsc": code}
+    )
 
 def api_calltrace(n):
-    return get("https://ab-calltraceapi.vercel.app/info", {"number": n})
+    return get(
+        "https://ab-calltraceapi.vercel.app/info",
+        {"number": n}
+    )
 
 def api_fampay(fid):
-    return get("https://fampay-2-number.vercel.app/get-number", {"id": fid})
+    return get(
+        "https://fampay-2-number.vercel.app/get-number",
+        {"id": fid}
+    )
