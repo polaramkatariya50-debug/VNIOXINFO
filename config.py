@@ -1,25 +1,22 @@
-# ===== BOT =====
-BOT_TOKEN = "8556191807:AAGt7noEjSaRlxZChZPFCorb3DlaxcTO_X0"
+import os
 
-# ===== OWNER =====
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 OWNER_IDS = {6972508083}
 
-# ===== MUST JOIN =====
-MUST_JOIN_CHANNELS = {
-    -1001596819852: "https://t.me/+whz_G-xn0KdkZWI1",
-    -1003389483500: "https://t.me/heroku_club",
-    -1001511253627: "https://t.me/NOBITA_SUPPORT",
-    -1002401784535: "https://t.me/OsintInformationGroup",
-    -1002363071054: "https://t.me/+Ah7RcBKx4zQ2YTE1",
-}
-
-# ===== LOG =====
-LOG_CHANNEL_ID = -1001234567890  # REAL ID ONLY
-
-# ===== DB =====
-MONGO_URI = "mongodb+srv://vishalpandeynkp:Bal6Y6FZeQeoAoqV@cluster0.dzgwt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "vni0x"
 
-# ===== RENDER =====
-WATERMARK_TEXT = "VNIOX • OSINT"
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+# MUST JOIN CHANNELS (5)
+MUST_JOIN_CHANNELS = {
+    1: "https://t.me/+whz_G-xn0KdkZWI1",
+    2: "https://t.me/heroku_club",
+    3: "https://t.me/NOBITA_SUPPORT",
+    4: "https://t.me/OsintInformationGroup",
+    5: "https://t.me/+Ah7RcBKx4zQ2YTE1",
+}
+
+# 🔴 BLOCKED GROUP (BOT COMPLETELY SILENT)
+BLOCKED_GROUP_IDS = {
+    -1002363071054
+}
