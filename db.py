@@ -6,13 +6,9 @@ db = client[DB_NAME]
 
 users = db.users
 
-def ensure_user(uid, ref_by=None):
+def ensure_user(uid):
     users.update_one(
         {"_id": uid},
-        {"$setOnInsert": {
-            "credits": 1,
-            "ref_by": ref_by,
-            "ref_count": 0
-        }},
+        {"$setOnInsert": {"credits": 5}},
         upsert=True
     )
