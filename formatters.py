@@ -1,6 +1,16 @@
-# =================================================
-# COMMON FOOTER (SAME FOR ALL APIs)
-# =================================================
+# ======================================================
+# SMART VALUE PICKER (N/A ISSUE FIX – CORE)
+# ======================================================
+
+def pick(src, *keys, default="N/A"):
+    if not isinstance(src, dict):
+        return default
+    for k in keys:
+        val = src.get(k)
+        if val not in (None, "", [], {}):
+            return val
+    return default
+
 
 def footer():
     return (
@@ -13,9 +23,9 @@ def footer():
     )
 
 
-def wrap_multiline(prefix, text):
-    if not text:
-        return f"{prefix} Not Available\n"
+def wrap(prefix, text):
+    if not text or text == "N/A":
+        return f"{prefix} N/A\n"
     parts = [p.strip() for p in str(text).split(",")]
     out = f"{prefix} {parts[0]}\n"
     for p in parts[1:]:
@@ -23,52 +33,52 @@ def wrap_multiline(prefix, text):
     return out
 
 
-# =================================================
-# 1️⃣ INDIAN NUMBER INFORMATION
-# =================================================
+# ======================================================
+# 1️⃣ INDIAN NUMBER INFO
+# ======================================================
 
 def fmt_india_number(d):
-    results = d.get("result", {}).get("result", [])
+    res = pick(d, "result", default={}).get("result", [])
 
     out = (
         "══════════════  I N D I A N   N U M B E R   I N F O R M A T I O N  ══════════════\n\n"
     )
 
-    if not results:
+    if not res:
         return out + "┃ ❌ No records found\n" + footer()
 
-    for i, r in enumerate(results, 1):
+    for i, r in enumerate(res, 1):
         out += (
             f"┃ 🔹 RESULT {i}\n"
-            f"┃ 👤 Name        : {r.get('name','Not Available')}\n"
-            f"┃ 📞 Mobile      : {r.get('mobile','Not Available')}\n"
-            f"┃ 👨‍👦 Father     : {r.get('father_name','Not Available')}\n"
+            f"┃ 👤 Name        : {pick(r,'name')}\n"
+            f"┃ 📞 Mobile      : {pick(r,'mobile')}\n"
+            f"┃ 👨‍👦 Father     : {pick(r,'father_name')}\n"
         )
-        out += wrap_multiline("┃ 📍 Address     :", r.get("address"))
+        out += wrap("┃ 📍 Address     :", pick(r, "address"))
         out += (
-            f"┃ 📱 Alt Mobile  : {r.get('alt_mobile','Not Available')}\n"
-            f"┃ 📡 Circle      : {r.get('circle','Not Available')}\n"
-            f"┃ 🆔 ID Number   : {r.get('id_number','Not Available')}\n"
-            f"┃ 📧 Email       : {r.get('email','Not Available')}\n"
-            f"┃ 🆔 Record ID   : {r.get('id','Not Available')}\n"
+            f"┃ 📱 Alt Mobile  : {pick(r,'alt_mobile')}\n"
+            f"┃ 📡 Circle      : {pick(r,'circle')}\n"
+            f"┃ 🆔 ID Number   : {pick(r,'id_number')}\n"
+            f"┃ 📧 Email       : {pick(r,'email')}\n"
+            f"┃ 🆔 Record ID   : {pick(r,'id')}\n"
         )
-        if i != len(results):
+        if i != len(res):
             out += "┃\n┃────────────────────────────────\n"
 
     return out + footer()
 
 
-# =================================================
-# 2️⃣ PAKISTAN NUMBER INFORMATION
-# =================================================
+# ======================================================
+# 2️⃣ PAKISTAN NUMBER INFO
+# ======================================================
 
 def fmt_pakistan_number(d):
-    records = d.get("data") or []
+    records = pick(d, "data", default=[])
 
     out = (
         "══════════════ 🇵🇰  P A K I S T A N  🇵🇰 ══════════════\n\n"
         "┃ 🔹 PHONE LOOKUP\n"
-        f"┃ 📞 Searched Phone : {d.get('number','N/A')}\n"
+        f"┃ 📞 Searched Phone : {pick(d,'number')}\n"
         "┃\n"
     )
 
@@ -79,249 +89,196 @@ def fmt_pakistan_number(d):
         out += (
             "┃────────────────────────────────\n"
             f"┃ 🔹 RECORD {i}\n"
-            f"┃ 👤 Name        : {r.get('name','N/A')}\n"
-            f"┃ 📞 Mobile      : {r.get('mobile','N/A')}\n"
-            f"┃ 🆔 CNIC        : {r.get('cnic','N/A')}\n"
+            f"┃ 👤 Name        : {pick(r,'name')}\n"
+            f"┃ 📞 Mobile      : {pick(r,'mobile')}\n"
+            f"┃ 🆔 CNIC        : {pick(r,'cnic')}\n"
         )
-        out += wrap_multiline("┃ 📍 Address     :", r.get("address"))
+        out += wrap("┃ 📍 Address     :", pick(r, "address"))
         out += "┃ 🌍 Country     : Pakistan\n┃\n"
 
     return out + footer()
 
 
-# =================================================
-# 3️⃣ VEHICLE INFORMATION (FULL DETAILS)
-# =================================================
+# ======================================================
+# 3️⃣ VEHICLE FULL INFORMATION
+# ======================================================
 
 def fmt_vehicle_info(d):
-    data = d.get("data", {})
+    src = d.get("data") or d.get("result") or d
 
     out = (
         "╔══════════════════════════════════╗\n"
-        f"║     🚗 VEHICLE DETAILS: {data.get('registration_no','N/A')}     ║\n"
+        f"║     🚗 VEHICLE DETAILS: {pick(src,'registration_no','rc_number')}     ║\n"
         "╚══════════════════════════════════╝\n\n"
     )
 
-    # Owner
-    owner = data.get("owner", {})
     out += (
         "┌─ 👤 OWNER INFORMATION ─┐\n"
-        f" Owner Name     : {owner.get('name','N/A')}\n"
-        f" Also Known As  : {owner.get('alias','N/A')}\n"
-        f" Father’s Name  : {owner.get('father','N/A')}\n"
+        f" Owner Name     : {pick(src,'owner_name','name')}\n"
+        f" Father’s Name  : {pick(src,'father_name')}\n"
         "└───────────────────────┘\n\n"
     )
 
-    # Address
-    address = data.get("address", {})
     out += (
         "┌─ 🏠 ADDRESS DETAILS ─┐\n"
-        f" Address : {address.get('address','N/A')}\n"
-        f" City    : {address.get('city','N/A')}\n"
-        f" State   : {address.get('state','N/A')}\n"
-        f" Pincode : {address.get('pincode','N/A')}\n"
+        f" Address : {pick(src,'address')}\n"
+        f" City    : {pick(src,'city')}\n"
+        f" State   : {pick(src,'state')}\n"
+        f" Pincode : {pick(src,'pincode')}\n"
         "└───────────────────────┘\n\n"
     )
 
-    # Vehicle specs
     out += (
         "┌─ 🔧 VEHICLE SPECIFICATIONS ─┐\n"
-        f" Manufacturer  : {data.get('manufacturer','N/A')}\n"
-        f" Model         : {data.get('model','N/A')}\n"
-        f" Vehicle Class : {data.get('vehicle_class','N/A')}\n"
-        f" Fuel Type     : {data.get('fuel_type','N/A')}\n"
+        f" Manufacturer  : {pick(src,'manufacturer','maker')}\n"
+        f" Model         : {pick(src,'model')}\n"
+        f" Vehicle Class : {pick(src,'vehicle_class')}\n"
+        f" Fuel Type     : {pick(src,'fuel_type')}\n"
         "└───────────────────────┘\n\n"
     )
 
-    # Registration
-    reg = data.get("registration", {})
     out += (
         "┌─ 📋 REGISTRATION DETAILS ─┐\n"
-        f" Registration No. : {reg.get('number','N/A')}\n"
-        f" Registration Dt.: {reg.get('date','N/A')}\n"
-        f" Registered RTO  : {reg.get('rto','N/A')}\n"
+        f" Registration No. : {pick(src,'registration_no')}\n"
+        f" Registration Dt.: {pick(src,'registration_date')}\n"
+        f" Registered RTO  : {pick(src,'rto')}\n"
         "└───────────────────────┘\n\n"
     )
 
-    # Insurance
-    ins = data.get("insurance", {})
     out += (
         "┌─ 🛡 INSURANCE STATUS ─┐\n"
-        f" Insurance Valid Till : {ins.get('valid_till','N/A')}\n"
-        f" Status               : {ins.get('status','N/A')}\n"
+        f" Insurance Valid Till : {pick(src,'insurance_valid_till')}\n"
+        f" Status               : {pick(src,'insurance_status')}\n"
         "└───────────────────────┘\n\n"
     )
 
     return out + footer()
 
 
-# =================================================
-# 4️⃣ VEHICLE NUMBER → OWNER MOBILE
-# =================================================
+# ======================================================
+# 4️⃣ VEHICLE → OWNER MOBILE
+# ======================================================
 
 def fmt_vehicle_owner_number(d):
-    data = d.get("data", d)
+    src = d.get("data") or d.get("result") or d
 
     out = (
         "╔══════════════════════════════════╗\n"
         "║   🚗 VEHICLE NUM TO OWNER NUM   ║\n"
         "╚══════════════════════════════════╝\n\n"
         "┌─ 🔍 MAPPING DETAILS ─┐\n"
-        f" Vehicle Number : {data.get('vehicle_number','N/A')}\n"
-        f" Mobile Number  : {data.get('mobile_number','N/A')}\n"
+        f" Vehicle Number : {pick(src,'vehicle_number')}\n"
+        f" Mobile Number  : {pick(src,'mobile_number')}\n"
         "└───────────────────────┘\n\n"
         "┌─ ℹ️ STATUS INFO ─┐\n"
         " Mapping Type : Vehicle → Owner Mobile\n"
-        f" Record Status: {data.get('status','SUCCESS')}\n"
+        f" Record Status: {pick(src,'status','SUCCESS')}\n"
         "└───────────────────────┘\n\n"
     )
 
     return out + footer()
 
 
-# =================================================
-# 5️⃣ AADHAAR → FAMILY INFORMATION
-# =================================================
+# ======================================================
+# 5️⃣ AADHAAR → FAMILY INFO
+# ======================================================
 
 def fmt_aadhaar_family_info(d):
-    data = d.get("data", {})
-    ration = data.get("ration_card", {})
-    members = data.get("family_members", [])
+    src = d.get("data") or d.get("result") or d
+    members = pick(src, "family_members", default=[])
 
     out = (
         "══════════════  A A D H A A R   T O   F A M I L Y   I N F O R M A T I O N  ══════════════\n\n"
-        "┃ 🔹 SEARCH DETAILS\n"
-        "┃ 🔍 Search Type       : AADHAAR\n"
-        f"┃ ✅ Success           : {data.get('success','True')}\n"
+        f"┃ 🆔 Ration Card No. : {pick(src,'ration_card_no')}\n"
+        f"┃ 🏛 State           : {pick(src,'state')}\n"
+        f"┃ 🗺 District        : {pick(src,'district')}\n"
         "┃\n"
-        "┃ 🔹 RATION CARD DETAILS\n"
-        f"┃ 🆔 Ration Card No.   : {ration.get('ration_card_no','N/A')}\n"
-        f"┃ 🪪 Card Type         : {ration.get('card_type','N/A')}\n"
-        f"┃ 📜 Scheme            : {ration.get('scheme','N/A')}\n"
-        f"┃ 📅 Issue Date        : {ration.get('issue_date','N/A')}\n"
-        f"┃ 🏛 State             : {ration.get('state','N/A')}\n"
-        f"┃ 🗺 District          : {ration.get('district','N/A')}\n"
-        f"┃ 🏠 Address           : {ration.get('address','N/A')}\n"
-        "┃\n"
-        "┃────────────────────────────────\n"
         "┃ 🔹 FAMILY MEMBERS\n\n"
     )
 
     for i, m in enumerate(members, 1):
         out += (
             f"┃ 👤 Member {i}\n"
-            f"┃ 🆔 Member ID         : {m.get('member_id','N/A')}\n"
-            f"┃ 👤 Name              : {m.get('name','N/A')}\n"
-            f"┃ ⚧️ Gender            : {m.get('gender','N/A')}\n"
-            f"┃ 🔐 Aadhaar (Masked)  : {m.get('aadhaar_masked','N/A')}\n"
-            f"┃ 🔗 Relationship      : {m.get('relationship','N/A')}\n"
-            f"┃ ✅ eKYC Status       : {m.get('ekyc_status','N/A')}\n"
+            f"┃ 👤 Name        : {pick(m,'name')}\n"
+            f"┃ ⚧ Gender       : {pick(m,'gender')}\n"
+            f"┃ 🔗 Relation     : {pick(m,'relationship')}\n"
             "┃\n"
         )
 
     return out + footer()
 
 
-# =================================================
-# 6️⃣ FREE FIRE UID INFORMATION
-# =================================================
+# ======================================================
+# 6️⃣ FREE FIRE UID INFO
+# ======================================================
 
 def fmt_free_fire_info(d):
-    data = d.get("data", d)
-    profile = data.get("profile", {})
-    stats = data.get("stats", {})
+    src = d.get("data") or d
 
     out = (
         "╔══════════════════════════════════╗\n"
         "║     🎮 FREE FIRE ID INFORMATION     ║\n"
         "╚══════════════════════════════════╝\n\n"
-        f"📌 Data fetched for UID : {data.get('uid','N/A')}\n\n"
-        "┌─ 👤 PROFILE DETAILS ─┐\n"
-        f" Nickname : {profile.get('nickname','N/A')}\n"
-        f" User ID  : {data.get('uid','N/A')}\n"
-        f" Region   : {profile.get('region','N/A')}\n"
-        f" Influencer : {profile.get('influencer','No')}\n"
-        "└───────────────────────┘\n\n"
-        "┌─ 🎖️ ACCOUNT STATS ─┐\n"
-        f" Level          : {stats.get('level','N/A')}\n"
-        f" Experience XP  : {stats.get('exp','N/A')}\n"
-        f" Ranked Points  : {stats.get('ranked_points','N/A')}\n"
-        f" Likes          : {stats.get('likes','N/A')}\n"
-        "└───────────────────────┘\n\n"
+        f" UID       : {pick(src,'uid')}\n"
+        f" Nickname  : {pick(src,'nickname','name')}\n"
+        f" Level     : {pick(src,'level')}\n"
+        f" Likes     : {pick(src,'likes')}\n\n"
     )
 
     return out + footer()
 
 
-# =================================================
-# 7️⃣ IFSC BANK INFORMATION
-# =================================================
+# ======================================================
+# 7️⃣ IFSC INFO
+# ======================================================
 
 def fmt_ifsc_info(d):
-    data = d.get("data", d)
+    src = d.get("data") or d
 
     out = (
         "══════════════  B A N K   I F S C   C O D E   I N F O R M A T I O N  ══════════════\n\n"
-        "┃ 🔹 BANK DETAILS\n"
-        f"┃ 🏦 Bank Name   : {data.get('BANK','N/A')}\n"
-        f"┃ 🆔 Bank Code   : {data.get('BANKCODE','N/A')}\n"
-        f"┃ 🌿 Branch      : {data.get('BRANCH','N/A')}\n"
-    )
-    out += wrap_multiline("┃ 🏢 Address     :", data.get("ADDRESS"))
-    out += (
-        f"┃ 🌆 City        : {data.get('CITY','N/A')}\n"
-        f"┃ 🏛 State       : {data.get('STATE','N/A')}\n"
-        "┃\n"
-        f"┃ 🔐 IFSC Code   : {data.get('IFSC','N/A')}\n"
-        f"┃ 🧾 MICR Code   : {data.get('MICR','N/A')}\n"
+        f"┃ 🏦 Bank Name : {pick(src,'BANK')}\n"
+        f"┃ 🌿 Branch    : {pick(src,'BRANCH')}\n"
+        f"┃ 🔐 IFSC      : {pick(src,'IFSC')}\n"
+        f"┃ 🧾 MICR      : {pick(src,'MICR')}\n"
     )
 
     return out + footer()
 
 
-# =================================================
-# 8️⃣ INDIAN CALL TRACE INFORMATION
-# =================================================
+# ======================================================
+# 8️⃣ CALL TRACE INFO
+# ======================================================
 
 def fmt_call_trace_info(d):
-    data = d.get("data", d)
-    loc = data.get("location", {})
+    src = d.get("data") or d
 
     out = (
         "╔══════════════════════════════════╗\n"
         "║   📞 INDIAN CALL TRACE INFORMATION   ║\n"
         "╚══════════════════════════════════╝\n\n"
-        "┌─ 📱 BASIC DETAILS ─┐\n"
-        f" Mobile Number : {data.get('number','N/A')}\n"
-        f" Connection    : {data.get('connection','N/A')}\n"
-        f" SIM Operator  : {data.get('operator','N/A')}\n"
-        f" Country       : India\n"
-        "└───────────────────────┘\n\n"
-        "┌─ 📍 LOCATION DETAILS ─┐\n"
-        f" Mobile State   : {loc.get('state','N/A')}\n"
-        f" Reference City : {loc.get('city','N/A')}\n"
-        "└───────────────────────┘\n\n"
+        f" Mobile Number : {pick(src,'number')}\n"
+        f" Operator      : {pick(src,'operator')}\n"
+        f" State         : {pick(src,'state')}\n\n"
     )
 
     return out + footer()
 
 
-# =================================================
-# 9️⃣ FAMPAY INFORMATION
-# =================================================
+# ======================================================
+# 9️⃣ FAMPAY INFO
+# ======================================================
 
 def fmt_fampay_info(d):
-    data = d.get("data", d)
+    src = d.get("data") or d
 
     out = (
         "══════════════  F A M P A Y   I N F O R M A T I O N  ══════════════\n\n"
-        "┃ 🔹 CONTACT DETAILS\n"
-        f"┃ 🆔 Fam ID      : {data.get('id','N/A')}\n"
-        f"┃ 👤 Name        : {data.get('name','N/A')}\n"
-        f"┃ 📞 Phone       : {data.get('phone','N/A')}\n"
-        f"┃ 📡 Source      : {data.get('source','N/A')}\n"
-        f"┃ ✅ Status      : {data.get('status','N/A')}\n"
-        f"┃ 🗂 Type        : {data.get('type','N/A')}\n\n"
+        f"┃ 🆔 Fam ID  : {pick(src,'id')}\n"
+        f"┃ 👤 Name    : {pick(src,'name')}\n"
+        f"┃ 📞 Phone   : {pick(src,'phone')}\n"
+        f"┃ 📡 Source  : {pick(src,'source')}\n"
+        f"┃ ✅ Status  : {pick(src,'status')}\n"
     )
 
     return out + footer()
