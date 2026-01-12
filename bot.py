@@ -1,129 +1,146 @@
 from telegram import Update
-from telegram.ext import *
-from config import BOT_TOKEN, BLOCKED_GROUP_IDS, OWNER_IDS
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters
+)
+
+from config import BOT_TOKEN, BLOCKED_GROUP_IDS
 from keyboards import main_menu, INFO_MENU
 from apis import *
+from formatters import *
 from utils import save_txt
-from db import ensure_user, users
+from db import ensure_user
 
-# ================= API MAP =================
+# ================= API BUTTON MAP =================
 
-API_MAP = {
-    "📱 INDIA NUMBER INFO": api_india_number,
-    "🇵🇰 PAKISTAN NUMBER INFO": api_pak_number,
-    "🚘 VEHICLE → INFORMATION": api_vehicle_info,
-    "🚗 VEHICLE → OWNER NUMBER": api_vehicle_num,
-    "🎮 FREE FIRE UID INFO": api_ff,
-    "🪪 AADHAAR / FAMILY INFO": api_id_family,
-    "🏦 IFSC INFO": api_ifsc,
-    "📡 CALL TRACE INFO": api_calltrace,
-    "💳 FAMPAY INFO": api_fampay,
+BUTTONS = {
+    "📱 INDIA NUMBER INFO": (api_india_number, fmt_india_number),
+    "🇵🇰 PAKISTAN NUMBER INFO": (api_pak_number, fmt_pakistan_number),
+    "🚘 VEHICLE → INFORMATION": (api_vehicle_info, fmt_vehicle_info),
+    "🚗 VEHICLE → OWNER NUMBER": (api_vehicle_num, fmt_vehicle_owner_number),
+    "🪪 AADHAAR / FAMILY INFO": (api_id_family, fmt_aadhaar_family_info),
+    "🎮 FREE FIRE UID INFO": (api_ff, fmt_free_fire_info),
+    "🏦 IFSC INFO": (api_ifsc, fmt_ifsc_info),
+    "📡 CALL TRACE INFO": (api_calltrace, fmt_call_trace_info),
+    "💳 FAMPAY INFO": (api_fampay, fmt_fampay_info),
 }
 
-# ================= HELPERS =================
-
-def is_blocked(update: Update):
-    return update.effective_chat.id in BLOCKED_GROUP_IDS
-
-# ================= START =================
+# ================= /START =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if is_blocked(update):
+    # Silent in blocked group
+    if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
     uid = update.effective_user.id
     ensure_user(uid)
 
-    text = (
-        "✨ VNIOXINFO – OSINT BOT\n\n"
-        "📂 GET INFORMATION – All OSINT APIs\n"
-        "🛒 GET API – Buy / Custom Bot\n"
-        "🎁 REFER & EARN – Earn Credits\n"
-        "🔐 OWNER PANEL – Admin Tools\n\n"
-        "👇 Select option:"
+    welcome_text = (
+        "✨ *WELCOME TO VNIOXINFO – OSINT TELEGRAM BOT*\n\n"
+        "🚀 *AVAILABLE FEATURES*\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "📱 Indian Number Lookup\n"
+        "🇵🇰 Pakistan Number Lookup\n"
+        "🚘 Vehicle Information\n"
+        "🚗 Vehicle → Owner Mobile\n"
+        "🪪 Aadhaar → Family Info\n"
+        "🏦 Bank IFSC Information\n"
+        "📡 Indian Call Trace\n"
+        "🎮 Free Fire UID Info\n"
+        "💳 FamPay Information\n\n"
+        "🔐 Must Join + Verify System\n"
+        "🔕 Silent in Blocked Groups\n"
+        "👑 Owner Control Panel\n\n"
+        "👇 *Select an option to continue*"
     )
 
-    await update.message.reply_text(text, reply_markup=main_menu(uid))
+    await update.message.reply_text(
+        welcome_text,
+        reply_markup=main_menu(uid),
+        parse_mode="Markdown"
+    )
 
-# ================= HANDLER =================
+
+# ================= VERIFY CALLBACK =================
+
+async def verify_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+
+    await update.callback_query.message.reply_text(
+        "✅ *VERIFICATION SUCCESSFUL*\n\nWelcome! 🎉",
+        reply_markup=main_menu(update.effective_user.id),
+        parse_mode="Markdown"
+    )
+
+
+# ================= MESSAGE HANDLER =================
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if is_blocked(update):
+    # Silent in blocked group
+    if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
-    uid = update.effective_user.id
     txt = update.message.text.strip()
 
-    # GET INFORMATION
+    # Open information menu
     if txt == "📂 GET INFORMATION":
-        await update.message.reply_text("Select API:", reply_markup=INFO_MENU)
-        return
-
-    # GET API
-    if txt == "🛒 GET API":
         await update.message.reply_text(
-            "🛒 GET API\n\n"
-            "• Buy OSINT API\n"
-            "• Make Your Own Bot\n\n"
-            "Contact: @SUBHXCOSMO"
+            "📂 *SELECT INFORMATION TYPE*",
+            reply_markup=INFO_MENU,
+            parse_mode="Markdown"
         )
         return
 
-    # REFER & EARN
-    if txt == "🎁 REFER & EARN":
-        bot = await context.bot.get_me()
-        u = users.find_one({"_id": uid}) or {}
-        refs = u.get("ref_count", 0)
-        credits = u.get("credits", 0)
-
+    # Back button
+    if txt == "⬅️ BACK":
         await update.message.reply_text(
-            f"🎁 REFER & EARN\n\n"
-            f"Your Link:\nhttps://t.me/{bot.username}?start={uid}\n\n"
-            f"Referrals: {refs}\n"
-            f"Credits: {credits}"
+            "⬅️ Back to main menu",
+            reply_markup=main_menu(update.effective_user.id)
         )
-        return
-
-    # OWNER PANEL
-    if txt == "🔐 OWNER PANEL":
-        if uid not in OWNER_IDS:
-            await update.message.reply_text("❌ Access Denied")
-            return
-
-        await update.message.reply_text(
-            "👑 OWNER PANEL\n\n"
-            "• Broadcast\n"
-            "• Stats\n"
-            "• Gift Credits\n"
-            "(Coming soon)"
-        )
-        return
-
-    # API BUTTON CLICK
-    if txt in API_MAP:
-        context.user_data["api"] = txt
-        await update.message.reply_text("✍️ Send input:")
-        return
-
-    # API INPUT
-    if "api" in context.user_data:
-        api_fn = API_MAP[context.user_data["api"]]
-        data = api_fn(txt)
-
-        # 🔥 RAW DATA -> TXT
-        file_path = save_txt(data)
-
-        await update.message.reply_document(
-            document=open(file_path, "rb"),
-            caption="📄 RAW API RESPONSE (.txt)"
-        )
-
         context.user_data.clear()
         return
 
-# ================= RUN =================
+    # API button pressed
+    if txt in BUTTONS:
+        context.user_data["mode"] = txt
+        await update.message.reply_text(
+            f"✍️ *Send input for:* `{txt}`",
+            parse_mode="Markdown"
+        )
+        return
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-app.run_polling()
+    # API input received
+    if "mode" in context.user_data:
+        api_fn, fmt_fn = BUTTONS[context.user_data["mode"]]
+        data = api_fn(txt)
+
+        result_text = fmt_fn(data)
+        file_path = save_txt(result_text)
+
+        await update.message.reply_document(
+            document=open(file_path, "rb"),
+            caption="📄 *OSINT REPORT*",
+            parse_mode="Markdown"
+        )
+
+        context.user_data.clear()
+
+
+# ================= BOT START =================
+
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(verify_callback, pattern="verify_join"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
