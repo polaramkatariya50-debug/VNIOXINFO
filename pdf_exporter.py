@@ -1,6 +1,9 @@
-from PIL import Image
+from fpdf import FPDF
 
 def image_to_pdf(img_path):
-    pdf = img_path.replace(".png", ".pdf")
-    Image.open(img_path).convert("RGB").save(pdf, "PDF", resolution=300.0)
-    return pdf
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.image(img_path, x=10, y=10, w=190)
+    path = img_path.replace(".png",".pdf")
+    pdf.output(path)
+    return path
