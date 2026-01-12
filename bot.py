@@ -1,198 +1,71 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CallbackQueryHandler,
-    ContextTypes,
-    MessageHandler,
-    filters,
-    ChatMemberHandler,
-    CommandHandler,
-)
-from config import *
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from config import BOT_TOKEN
 from apis import *
 from formatters import *
 from image_renderer import text_to_image
 from pdf_exporter import image_to_pdf
-from db import Database
-from logger import send_log
 
-# ================= DATABASE =================
-db = Database(MONGO_URI, DB_NAME)
+# ===== BUTTON MAP =====
+BUTTONS = {
+    "📱 INDIA NUMBER INFO": ("9876543210", api_india_number, lambda d: fmt_india_number(d)),
+    "🎮 FREE FIRE UID INFO": ("2819649271", api_ff, lambda d: fmt_raw("FREE FIRE UID INFO", d)),
+    "🇵🇰 PAKISTAN NUMBER INFO": ("3014819864", api_pak_number, lambda d: fmt_raw("PAKISTAN NUMBER INFO", d)),
+    "🚗 VEHICLE → OWNER NUMBER": ("UP64AF2215", api_vehicle_num, lambda d: fmt_raw("VEHICLE OWNER NUMBER", d)),
+    "🚘 VEHICLE → INFORMATION": ("MH01AB1234", api_vehicle_info, lambda d: fmt_raw("VEHICLE INFORMATION", d)),
+    "🪪 AADHAAR / FAMILY INFO": ("066004120629", api_id_family, lambda d: fmt_raw("AADHAAR / FAMILY INFO", d)),
+    "🏦 IFSC INFO": ("SBIN0000001", api_ifsc, lambda d: fmt_raw("IFSC INFO", d)),
+    "📡 CALL TRACE INFO": ("9876543210", api_calltrace, lambda d: fmt_raw("CALL TRACE INFO", d)),
+    "💳 FAMPAY INFO": ("mouktik0@fam", api_fampay, lambda d: fmt_raw("FAMPAY INFO", d)),
+}
 
-# ================= HELPERS =================
-def is_owner(uid: int) -> bool:
-    return uid in OWNER_IDS
+KEYBOARD = [
+    ["🎮 FREE FIRE UID INFO", "📱 INDIA NUMBER INFO"],
+    ["🇵🇰 PAKISTAN NUMBER INFO", "🚗 VEHICLE → OWNER NUMBER"],
+    ["🚘 VEHICLE → INFORMATION", "🪪 AADHAAR / FAMILY INFO"],
+    ["🏦 IFSC INFO", "📡 CALL TRACE INFO"],
+    ["💳 FAMPAY INFO"],
+]
 
-
-async def check_join(uid: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    for cid in MUST_JOIN_CHANNELS:
-        try:
-            member = await context.bot.get_chat_member(cid, uid)
-            if member.status in ("left", "kicked"):
-                return False
-        except Exception:
-            return False
-    return True
-
-
-async def must_join(update: Update):
-    buttons = [
-        [InlineKeyboardButton("🔔 Join Channel", url=url)]
-        for url in MUST_JOIN_CHANNELS.values()
-    ]
+async def entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🚫 Bot use karne ke liye pehle sabhi channels join karo:",
-        reply_markup=InlineKeyboardMarkup(buttons),
+        "sʜʏᴧᴍ\n\n✨ Welcome to VNIOX OSINT Intelligence System\n🔍 Full HD Image + PDF"
     )
-
-
-async def send_result(update: Update, title: str, data: dict):
-    text = fmt_all(title, data)
-    img_path = text_to_image(text)
-    pdf_path = image_to_pdf(img_path)
-
-    await update.message.reply_photo(
-        photo=open(img_path, "rb"),
-        caption=f"📄 {title}",
-    )
-    await update.message.reply_document(
-        document=open(pdf_path, "rb"),
-        filename="OSINT_Report.pdf",
-    )
-
-# ================= START =================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    db.add_user(user.id)
-
-    await send_log(
-        context.bot,
-        f"START\nUser ID: {user.id}\nUsername: @{user.username}",
-    )
-
-    if not await check_join(user.id, context):
-        await must_join(update)
-        return
-
-    buttons = [
-        [InlineKeyboardButton("📞 Indian Number", callback_data="search:num")],
-        [InlineKeyboardButton("🚗 Vehicle → Owner", callback_data="search:veh_owner")],
-        [InlineKeyboardButton("🚘 Vehicle → Information", callback_data="search:veh_info")],
-        [InlineKeyboardButton("🪪 Family / Ration", callback_data="search:family")],
-        [InlineKeyboardButton("🇵🇰 Pakistan Number", callback_data="search:pk")],
-        [InlineKeyboardButton("🚘 RC Info", callback_data="search:rc")],
-        [InlineKeyboardButton("🎮 Free Fire UID", callback_data="search:ff")],
-        [InlineKeyboardButton("🏦 IFSC Info", callback_data="search:ifsc")],
-        [InlineKeyboardButton("📡 Call Trace", callback_data="search:trace")],
-        [InlineKeyboardButton("💳 Fampay Info", callback_data="search:fampay")],
-    ]
-
     await update.message.reply_text(
-        "🔥 **VNIOX OSINT PANEL**\n\nSelect an option:",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode="Markdown",
+        "👇 Select:",
+        reply_markup=ReplyKeyboardMarkup(KEYBOARD, resize_keyboard=True)
     )
 
-# ================= BUTTON ROUTER =================
-async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    txt = update.message.text.strip()
 
-    if context.user_data is None:
-        context.user_data = {}
-
-    try:
-        action, key = query.data.split(":")
-    except ValueError:
+    if txt in BUTTONS:
+        ex, _, _ = BUTTONS[txt]
+        context.user_data["mode"] = txt
+        await update.message.reply_text(f"{txt}\n\nExample:\n{ex}\n\n✍️ Send input:")
         return
 
-    if action != "search":
+    mode = context.user_data.get("mode")
+    if not mode:
         return
 
-    context.user_data["await"] = key
+    await update.message.reply_text("⏳ Loading...")
+    _, api_fn, fmt_fn = BUTTONS[mode]
+    data = api_fn(txt)
+    out = fmt_fn(data)
 
-    examples = {
-        "num": "📞 Example:\n9876543210",
-        "veh_owner": "🚗 Example:\nUP64AF2215",
-        "veh_info": "🚘 Example:\nMH01AB1234",
-        "family": "🪪 Example:\n066004120629",
-        "pk": "🇵🇰 Example:\n3014819864",
-        "rc": "🚘 Example:\nMH01AB1234",
-        "ff": "🎮 Example:\n2819649271",
-        "ifsc": "🏦 Example:\nSBIN0000001",
-        "trace": "📡 Example:\n9876543210",
-        "fampay": "💳 Example:\nmouktik0@fam",
-    }
+    img = text_to_image(out)
+    pdf = image_to_pdf(img)
 
-    await query.message.reply_text(
-        f"{examples.get(key, '✍️ Send input value')}\n\n✍️ Now send value:"
-    )
+    await update.message.reply_photo(photo=open(img, "rb"))
+    await update.message.reply_document(document=open(pdf, "rb"))
+    context.user_data.clear()
 
-# ================= TEXT INPUT HANDLER =================
-async def text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # SAFETY: ensure user_data exists
-    if context.user_data is None:
-        context.user_data = {}
-
-    key = context.user_data.get("await")
-    if not key:
-        return
-
-    value = update.message.text.strip()
-    context.user_data["await"] = None
-
-    loading = await update.message.reply_text("⏳ Loading, please wait...")
-
-    api_map = {
-        "num": api_num,
-        "veh_owner": api_vehicle_num,
-        "veh_info": api_vehicle_info,
-        "family": api_id_family,
-        "pk": api_pk,
-        "rc": api_rc,
-        "ff": api_ff,
-        "ifsc": api_ifsc,
-        "trace": api_calltrace,
-        "fampay": api_fampay,
-    }
-
-    try:
-        data = api_map[key](value)
-        await loading.delete()
-        await send_result(update, key.upper(), data)
-    except Exception as e:
-        await loading.edit_text(f"❌ Error: {e}")
-
-# ================= BOT ADDED TO GROUP =================
-async def bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.my_chat_member.new_chat_member.status == "member":
-        user = update.effective_user
-        chat = update.effective_chat
-
-        await context.bot.send_message(
-            chat.id,
-            f"👋 Hello {chat.title}\n\n"
-            f"🤖 VNIOX OSINT Bot Activated\n"
-            f"➕ Added by @{user.username or user.first_name}",
-        )
-
-        await send_log(
-            context.bot,
-            f"BOT ADDED\nBy: {user.id}\nChat ID: {chat.id}",
-        )
-
-# ================= MAIN =================
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(router))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_input))
-    app.add_handler(ChatMemberHandler(bot_added, ChatMemberHandler.MY_CHAT_MEMBER))
-
-    print("🤖 VNIOX OSINT Bot is running...")
+    app.add_handler(MessageHandler(filters.TEXT, entry))
+    app.add_handler(MessageHandler(filters.TEXT, handle))
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
