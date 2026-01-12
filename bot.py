@@ -1,38 +1,11 @@
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    filters
-)
-
-from config import BOT_TOKEN, BLOCKED_GROUP_IDS
-from keyboards import main_menu, INFO_MENU
-from apis import *
-from formatters import *
-from utils import save_txt
+from telegram.ext import ContextTypes
+from config import BLOCKED_GROUP_IDS
+from keyboards import main_menu, must_join_keyboard
 from db import ensure_user
 
-# ================= API BUTTON MAP =================
-
-BUTTONS = {
-    "📱 INDIA NUMBER INFO": (api_india_number, fmt_india_number),
-    "🇵🇰 PAKISTAN NUMBER INFO": (api_pak_number, fmt_pakistan_number),
-    "🚘 VEHICLE → INFORMATION": (api_vehicle_info, fmt_vehicle_info),
-    "🚗 VEHICLE → OWNER NUMBER": (api_vehicle_num, fmt_vehicle_owner_number),
-    "🪪 AADHAAR / FAMILY INFO": (api_id_family, fmt_aadhaar_family_info),
-    "🎮 FREE FIRE UID INFO": (api_ff, fmt_free_fire_info),
-    "🏦 IFSC INFO": (api_ifsc, fmt_ifsc_info),
-    "📡 CALL TRACE INFO": (api_calltrace, fmt_call_trace_info),
-    "💳 FAMPAY INFO": (api_fampay, fmt_fampay_info),
-}
-
-# ================= /START =================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Silent in blocked group
+    # 🔕 Blocked group me bilkul silent
     if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
@@ -41,8 +14,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_text = (
         "✨ *WELCOME TO VNIOXINFO – OSINT TELEGRAM BOT*\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "🚀 *AVAILABLE FEATURES*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "📱 Indian Number Lookup\n"
         "🇵🇰 Pakistan Number Lookup\n"
         "🚘 Vehicle Information\n"
@@ -52,7 +26,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📡 Indian Call Trace\n"
         "🎮 Free Fire UID Info\n"
         "💳 FamPay Information\n\n"
-        "🔐 Must Join + Verify System\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "🔐 *SECURITY FEATURES*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "✅ Must Join + Verify\n"
         "🔕 Silent in Blocked Groups\n"
         "👑 Owner Control Panel\n\n"
         "👇 *Select an option to continue*"
@@ -65,82 +42,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ================= VERIFY CALLBACK =================
-
 async def verify_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.answer()
-
-    await update.callback_query.message.reply_text(
-        "✅ *VERIFICATION SUCCESSFUL*\n\nWelcome! 🎉",
-        reply_markup=main_menu(update.effective_user.id),
-        parse_mode="Markdown"
-    )
-
-
-# ================= MESSAGE HANDLER =================
-
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Silent in blocked group
+    # 🔕 Blocked group me silent
     if update.effective_chat and update.effective_chat.id in BLOCKED_GROUP_IDS:
         return
 
-    txt = update.message.text.strip()
+    await update.callback_query.answer()
 
-    # Open information menu
-    if txt == "📂 GET INFORMATION":
-        await update.message.reply_text(
-            "📂 *SELECT INFORMATION TYPE*",
-            reply_markup=INFO_MENU,
-            parse_mode="Markdown"
-        )
-        return
-
-    # Back button
-    if txt == "⬅️ BACK":
-        await update.message.reply_text(
-            "⬅️ Back to main menu",
-            reply_markup=main_menu(update.effective_user.id)
-        )
-        context.user_data.clear()
-        return
-
-    # API button pressed
-    if txt in BUTTONS:
-        context.user_data["mode"] = txt
-        await update.message.reply_text(
-            f"✍️ *Send input for:* `{txt}`",
-            parse_mode="Markdown"
-        )
-        return
-
-    # API input received
-    if "mode" in context.user_data:
-        api_fn, fmt_fn = BUTTONS[context.user_data["mode"]]
-        data = api_fn(txt)
-
-        result_text = fmt_fn(data)
-        file_path = save_txt(result_text)
-
-        await update.message.reply_document(
-            document=open(file_path, "rb"),
-            caption="📄 *OSINT REPORT*",
-            parse_mode="Markdown"
-        )
-
-        context.user_data.clear()
-
-
-# ================= BOT START =================
-
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(verify_callback, pattern="verify_join"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-
-    app.run_polling()
-
-
-if __name__ == "__main__":
-    main()
+    await update.callback_query.message.reply_text(
+        "✅ *VERIFICATION SUCCESSFUL*\n\n"
+        "Welcome to VNIOXINFO 🎉",
+        reply_markup=main_menu(update.effective_user.id),
+        parse_mode="Markdown"
+    )
