@@ -1,16 +1,15 @@
 from pymongo import MongoClient
+from config import MONGO_URI, DB_NAME
 
-class Database:
-    def __init__(self, uri, name):
-        self.client = MongoClient(uri)
-        self.db = self.client[name]
+client = MongoClient(MONGO_URI)
+db = client[DB_NAME]
 
-    def add_user(self, uid):
-        self.db.users.update_one(
-            {"_id": uid},
-            {"$set": {"_id": uid}},
-            upsert=True
-        )
+users = db.users
+logs = db.logs
 
-    def get_users(self):
-        return [u["_id"] for u in self.db.users.find({}, {"_id": 1})]
+def ensure_user(uid):
+    users.update_one(
+        {"_id": uid},
+        {"$setOnInsert": {"credits": 0}},
+        upsert=True
+    )
