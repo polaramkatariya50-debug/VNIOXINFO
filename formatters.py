@@ -248,3 +248,55 @@ def fmt_free_fire_info(d):
         "└───────────────────────┘\n\n"
     )
     return out + footer()
+################################### 🚘 VEHICLE INFORMATION ###########################
+
+def fmt_vehicle_info(d):
+    data = d.get("data") or d
+
+    out = (
+        "╔══════════════════════════════════╗\n"
+        "║     🚘 VEHICLE INFORMATION     ║\n"
+        "╚══════════════════════════════════╝\n\n"
+    )
+
+    # Vehicle Basic
+    out += (
+        "┌─ 🔧 VEHICLE DETAILS ─┐\n"
+        f" Registration No : {data.get('registration_no','N/A')}\n"
+        f" Vehicle Class  : {data.get('vehicle_class','N/A')}\n"
+        f" Fuel Type     : {data.get('fuel_type','N/A')}\n"
+        f" Manufacturer  : {data.get('manufacturer','N/A')}\n"
+        f" Model         : {data.get('model','N/A')}\n"
+        "└───────────────────────┘\n\n"
+    )
+
+    # Owner
+    owner = data.get("owner", {})
+    out += (
+        "┌─ 👤 OWNER DETAILS ─┐\n"
+        f" Owner Name     : {owner.get('name','N/A')}\n"
+        f" Father Name   : {owner.get('father','N/A')}\n"
+        "└───────────────────────┘\n\n"
+    )
+
+    # Registration
+    reg = data.get("registration", {})
+    out += (
+        "┌─ 📋 REGISTRATION DETAILS ─┐\n"
+        f" Registration Date : {reg.get('date','N/A')}\n"
+        f" RTO              : {reg.get('rto','N/A')}\n"
+        f" State            : {reg.get('state','N/A')}\n"
+        "└───────────────────────┘\n\n"
+    )
+
+    # Insurance
+    ins = data.get("insurance", {})
+    out += (
+        "┌─ 🛡 INSURANCE ─┐\n"
+        f" Valid Till : {ins.get('valid_till','N/A')}\n"
+        f" Status     : {ins.get('status','N/A')}\n"
+        "└───────────────────────┘\n\n"
+    )
+
+    return out + footer()
+
