@@ -1,10 +1,10 @@
 import os
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8556191807:AAGt7noEjSaRlxZChZPFCorb3DlaxcTO_X0")
 
 OWNER_IDS = {6972508083}
 
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = os.getenv("mongodb+srv://vishalpandeynkp:Bal6Y6FZeQeoAoqV@cluster0.dzgwt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 DB_NAME = "vni0x"
 
 # MUST JOIN CHANNELS (5)
